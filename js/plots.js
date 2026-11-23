@@ -1,3 +1,14 @@
+import {
+    displayProteinInfo,
+    highlightProtein
+} from "./ui.js";
+
+/* ==========================================
+   CURRENT VOLCANO DATA
+========================================== */
+
+let currentVolcanoData = [];
+
 /* ==========================================
    PCA PLOT
 ========================================== */
@@ -15,14 +26,16 @@ export function drawPCA(data) {
             "<p>No PCA data available.</p>";
 
         return;
+
     }
 
-    const groups =
-        [...new Set(
+    const groups = [
+        ...new Set(
             data.map(
-                x => x.group
+                d => d.group
             )
-        )];
+        )
+    ];
 
     const traces = groups.map(group => {
 
@@ -64,99 +77,113 @@ export function drawPCA(data) {
                 group,
 
             marker: {
+
                 size: 14
+
             }
+
         };
 
     });
 
-    const layout = {
-
-        title:
-            "Principal Component Analysis",
-
-        xaxis: {
-            title: "PC1"
-        },
-
-        yaxis: {
-            title: "PC2"
-        },
-
-        hovermode:
-            "closest"
-    };
-
     Plotly.newPlot(
+
         "pcaPlot",
+
         traces,
-        layout,
+
         {
-            responsive: true
+
+            title:
+                "Principal Component Analysis",
+
+            xaxis: {
+
+                title:
+                    "PC1"
+
+            },
+
+            yaxis: {
+
+                title:
+                    "PC2"
+
+            },
+
+            hovermode:
+                "closest"
+
+        },
+
+        {
+
+            responsive:
+                true
+
         }
+
     );
+
 }
 
 /* ==========================================
-   VOLCANO PLOT
+   VOLCANO
 ========================================== */
 
 export function drawVolcano(data) {
 
-    const container =
+    currentVolcanoData =
+        data || [];
+
+    const volcano =
         document.getElementById(
             "volcanoPlot"
         );
 
-    if (!data || data.length === 0) {
+    if (
+        !data ||
+        data.length === 0
+    ) {
 
-        container.innerHTML =
-            "<p>No differential expression results.</p>";
+        volcano.innerHTML =
+            "<p>No volcano results available.</p>";
 
         return;
+
     }
-
-    const x =
-        data.map(
-            p => p.log2fc
-        );
-
-    const y =
-        data.map(
-            p =>
-                -Math.log10(
-                    Math.max(
-                        p.adjP,
-                        1e-300
-                    )
-                )
-        );
 
     const colors =
         data.map(row => {
 
             if (
-                row.significant &&
-                row.log2fc > 1
-            ) {
+                row.status ===
+                "Upregulated"
+            )
                 return "#d62728";
-            }
 
             if (
-                row.significant &&
-                row.log2fc < -1
-            ) {
+                row.status ===
+                "Downregulated"
+            )
                 return "#1f77b4";
-            }
 
             return "#bdbdbd";
+
         });
 
     const trace = {
 
-        x,
+        x:
+            data.map(
+                x => x.log2fc
+            ),
 
-        y,
+        y:
+            data.map(
+                x =>
+                x.negLog10AdjP
+            ),
 
         mode:
             "markers",
@@ -169,187 +196,177 @@ export function drawVolcano(data) {
 
         marker: {
 
-            size: 8,
-
             color:
                 colors,
 
-            opacity:
-                0.75
+            size: 8,
+
+            opacity: 0.8
+
         },
 
         hovertemplate:
+
             "<b>%{customdata.gene}</b><br>" +
+
             "Accession: %{customdata.accession}<br>" +
-            "Log2FC: %{x:.2f}<br>" +
-            "Adj.P: %{customdata.adjP:.4e}<br>" +
+
+            "Log2FC: %{customdata.log2fc:.3f}<br>" +
+
+            "Adj.P: %{customdata.adjP:.2e}<br>" +
+
             "<extra></extra>"
+
     };
 
-    const layout = {
-
-        title:
-            "Volcano Plot",
-
-        xaxis: {
-
-            title:
-                "Log2 Fold Change",
-
-            zeroline:
-                true
-        },
-
-        yaxis: {
-
-            title:
-                "-log10(FDR)"
-        },
-
-        shapes: [
-
-            {
-                type: "line",
-                x0: -1,
-                x1: -1,
-                y0: 0,
-                y1: Math.max(...y),
-                line: {
-                    dash: "dash",
-                    color: "gray"
-                }
-            },
-
-            {
-                type: "line",
-                x0: 1,
-                x1: 1,
-                y0: 0,
-                y1: Math.max(...y),
-                line: {
-                    dash: "dash",
-                    color: "gray"
-                }
-            },
-
-            {
-                type: "line",
-                x0:
-                    Math.min(...x),
-
-                x1:
-                    Math.max(...x),
-
-                y0:
-                    -Math.log10(0.05),
-
-                y1:
-                    -Math.log10(0.05),
-
-                line: {
-                    dash: "dash",
-                    color: "gray"
-                }
-            }
-        ],
-
-        hovermode:
-            "closest"
-    };
-
-    Plotly.newPlot(
-        "volcanoPlot",
-        [trace],
-        layout,
-        {
-            responsive: true
-        }
-    );
-
-    attachVolcanoClick();
-}
-
-/* ==========================================
-   VOLCANO CLICK HANDLER
-========================================== */
-
-function attachVolcanoClick() {
-
-    const volcano =
-        document.getElementById(
-            "volcanoPlot"
+    const maxY =
+        Math.max(
+            ...data.map(
+                x =>
+                x.negLog10AdjP
+            )
         );
 
-    volcano.removeAllListeners?.(
-        "plotly_click"
+    Plotly.newPlot(
+
+        volcano,
+
+        [trace],
+
+        {
+
+            title:
+                "Volcano Plot",
+
+            xaxis: {
+
+                title:
+                    "Log2 Fold Change"
+
+            },
+
+            yaxis: {
+
+                title:
+                    "-Log10 FDR"
+
+            },
+
+            shapes: [
+
+                {
+                    type: "line",
+
+                    x0: -1,
+                    x1: -1,
+
+                    y0: 0,
+                    y1: maxY,
+
+                    line: {
+                        dash: "dash",
+                        color: "gray"
+                    }
+                },
+
+                {
+                    type: "line",
+
+                    x0: 1,
+                    x1: 1,
+
+                    y0: 0,
+                    y1: maxY,
+
+                    line: {
+                        dash: "dash",
+                        color: "gray"
+                    }
+                },
+
+                {
+                    type: "line",
+
+                    x0:
+                        Math.min(
+                            ...data.map(
+                                x =>
+                                x.log2fc
+                            )
+                        ),
+
+                    x1:
+                        Math.max(
+                            ...data.map(
+                                x =>
+                                x.log2fc
+                            )
+                        ),
+
+                    y0:
+                        -Math.log10(
+                            0.05
+                        ),
+
+                    y1:
+                        -Math.log10(
+                            0.05
+                        ),
+
+                    line: {
+
+                        dash:
+                            "dash",
+
+                        color:
+                            "gray"
+
+                    }
+
+                }
+
+            ]
+
+        },
+
+        {
+
+            responsive:
+                true
+
+        }
+
     );
 
     volcano.on(
         "plotly_click",
-
         event => {
 
             const protein =
                 event.points[0]
-                .customdata;
+                    .customdata;
 
-            showProteinInfo(
+            displayProteinInfo(
                 protein
+            );
+
+            highlightProtein(
+                protein.accession
             );
 
         }
     );
+
 }
 
 /* ==========================================
-   PROTEIN INFO PANEL
+   PROVIDE DATA FOR SEARCH
 ========================================== */
 
-function showProteinInfo(
-    protein
-) {
+export function getCurrentVolcanoData() {
 
-    const panel =
-        document.getElementById(
-            "proteinInfo"
-        );
+    return currentVolcanoData;
 
-    panel.innerHTML = `
-
-    <h3>
-        ${protein.gene || "Unknown"}
-    </h3>
-
-    <table>
-
-        <tr>
-            <th>Accession</th>
-            <td>${protein.accession}</td>
-        </tr>
-
-        <tr>
-            <th>Log2FC</th>
-            <td>${protein.log2fc.toFixed(3)}</td>
-        </tr>
-
-        <tr>
-            <th>P-value</th>
-            <td>${protein.pvalue.toExponential(3)}</td>
-        </tr>
-
-        <tr>
-            <th>Adjusted P</th>
-            <td>${protein.adjP.toExponential(3)}</td>
-        </tr>
-
-        <tr>
-            <th>Significant</th>
-            <td>${protein.significant}</td>
-        </tr>
-
-    </table>
-
-    `;
 }
 
 /* ==========================================
@@ -360,7 +377,7 @@ export function drawHeatmap(
     heatmapData
 ) {
 
-    const container =
+    const heatmap =
         document.getElementById(
             "heatmapPlot"
         );
@@ -370,64 +387,76 @@ export function drawHeatmap(
         !heatmapData.zscores
     ) {
 
-        container.innerHTML =
+        heatmap.innerHTML =
             "<p>No heatmap data available.</p>";
 
         return;
+
     }
 
-    const trace = {
-
-        z:
-            heatmapData.zscores,
-
-        x:
-            heatmapData.samples,
-
-        y:
-            heatmapData.proteins,
-
-        type:
-            "heatmap",
-
-        colorscale:
-            "RdBu",
-
-        reversescale:
-            true,
-
-        zmid:
-            0,
-
-        hovertemplate:
-            "Protein: %{y}<br>" +
-            "Sample: %{x}<br>" +
-            "Z-score: %{z:.2f}<extra></extra>"
-    };
-
-    const layout = {
-
-        title:
-            "Protein Heatmap",
-
-        height:
-            900,
-
-        yaxis: {
-
-            automargin:
-                true
-        }
-    };
-
     Plotly.newPlot(
-        "heatmapPlot",
-        [trace],
-        layout,
+
+        heatmap,
+
+        [
+
+            {
+
+                z:
+                    heatmapData
+                        .zscores,
+
+                x:
+                    heatmapData
+                        .samples,
+
+                y:
+                    heatmapData
+                        .proteins,
+
+                type:
+                    "heatmap",
+
+                colorscale:
+                    "RdBu",
+
+                reversescale:
+                    true,
+
+                zmid:
+                    0,
+
+                hovertemplate:
+
+                    "Protein: %{y}<br>" +
+
+                    "Sample: %{x}<br>" +
+
+                    "Z-score: %{z:.2f}<extra></extra>"
+
+            }
+
+        ],
+
         {
-            responsive: true
+
+            title:
+                "Protein Heatmap",
+
+            height:
+                900
+
+        },
+
+        {
+
+            responsive:
+                true
+
         }
+
     );
+
 }
 
 /* ==========================================
@@ -452,50 +481,60 @@ export function drawResultsTable(
             "<tr><td>No results available.</td></tr>";
 
         return;
+
     }
 
-    const header = `
+    table.innerHTML = `
 
-    <tr>
-
-        <th>Gene</th>
-        <th>Accession</th>
-        <th>Log2FC</th>
-        <th>Adj.P</th>
-        <th>Significant</th>
-
-    </tr>
-
-    `;
-
-    const rows =
-        results
-        .slice(0,1000)
-        .map(r => `
+    <thead>
 
         <tr>
 
-            <td>${r.gene}</td>
+            <th>Gene</th>
 
-            <td>${r.accession}</td>
+            <th>Accession</th>
 
-            <td>${r.log2fc.toFixed(3)}</td>
+            <th>Log2FC</th>
 
-            <td>${r.adjP.toExponential(3)}</td>
+            <th>Adj.P</th>
 
-            <td>${r.significant}</td>
+            <th>Status</th>
 
         </tr>
 
-        `)
-        .join("");
+    </thead>
 
-    table.innerHTML =
-        header + rows;
+    <tbody>
+
+        ${results
+            .slice(0,1000)
+            .map(row => `
+
+                <tr>
+
+                    <td>${row.gene}</td>
+
+                    <td>${row.accession}</td>
+
+                    <td>${row.log2fc.toFixed(3)}</td>
+
+                    <td>${row.adjP.toExponential(3)}</td>
+
+                    <td>${row.status}</td>
+
+                </tr>
+
+            `)
+            .join("")}
+
+    </tbody>
+
+    `;
+
 }
 
 /* ==========================================
-   DOWNLOAD PLOT PNG
+   DOWNLOAD PLOT
 ========================================== */
 
 export function downloadPlot(
@@ -504,12 +543,24 @@ export function downloadPlot(
 ) {
 
     Plotly.downloadImage(
+
         divId,
+
         {
-            format: "png",
+
+            format:
+                "png",
+
             filename,
-            width: 1600,
-            height: 1200
+
+            width:
+                1600,
+
+            height:
+                1200
+
         }
+
     );
+
 }
