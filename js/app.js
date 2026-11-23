@@ -23,6 +23,61 @@ import {
 let analysisResults = null;
 
 /* ---------------------------------------
+   COMPARISON DROPDOWN
+--------------------------------------- */
+
+function populateComparisonDropdown(){
+
+    const selector =
+        document.getElementById(
+            "comparisonSelector"
+        );
+
+    selector.innerHTML = "";
+
+    const comparisons =
+        Object.keys(
+            analysisResults.volcano
+        );
+
+    comparisons.forEach(name=>{
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+        option.value =
+            name;
+
+        option.textContent =
+            name;
+
+        selector.appendChild(
+            option
+        );
+
+    });
+}
+
+/* -------------------------
+   DROPDOWN LISTENER
+------------------------- */
+
+document
+    .getElementById(
+        "comparisonSelector"
+    )
+    .addEventListener(
+        "change",
+        () => {
+
+            render();
+
+        }
+    );
+
+/* ---------------------------------------
    FILE UPLOAD
 --------------------------------------- */
 
@@ -43,9 +98,7 @@ document
                 analysisResults.metadata
             );
 
-            document.getElementById(
-                "combatStatus"
-            ).innerHTML = "";
+            populateComparisonDropdown();
 
             render();
 
@@ -154,21 +207,34 @@ function render() {
 
     if (!analysisResults) return;
 
+    const selector =
+        document.getElementById(
+            "comparisonSelector"
+        );
+
+    const comparison =
+        selector?.value ||
+        Object.keys(
+            analysisResults.volcano
+        )[0];
+
+    const volcanoData =
+        analysisResults.volcano[
+            comparison
+        ];
+
+    const resultsData =
+        analysisResults.results[
+            comparison
+        ];
+
     const pcaData =
         analysisResults.correctedPCA ||
         analysisResults.pca;
 
-    const volcanoData =
-        analysisResults.correctedVolcano ||
-        analysisResults.volcano;
-
     const heatmapData =
         analysisResults.correctedHeatmap ||
         analysisResults.heatmap;
-
-    const resultsData =
-        analysisResults.correctedResults ||
-        analysisResults.results;
 
     if (pcaData) {
         drawPCA(pcaData);
@@ -216,3 +282,4 @@ function updateDataStatus() {
             "Showing raw data";
     }
 }
+
