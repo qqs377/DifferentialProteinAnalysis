@@ -1,6 +1,6 @@
-import { PCA } from "ml-pca";
+import PCA from "https://cdn.skypack.dev/ml-pca";
 
-import { jStat } from "jstat";
+import { jStat } from "https://esm.sh/jstat";
 
 /* ==========================================
    MAIN ENTRY POINT
