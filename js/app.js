@@ -3,7 +3,8 @@ import { loadExcel } from "./analysis.js";
 import {
     drawVolcano,
     drawPCA,
-    drawHeatmap
+    drawHeatmap,
+    drawResultsTable
 } from "./plots.js";
 
 import {
@@ -153,11 +154,6 @@ function render() {
 
     if (!analysisResults) return;
 
-    /*
-     * If corrected analyses exist,
-     * display those instead of raw.
-     */
-
     const pcaData =
         analysisResults.correctedPCA ||
         analysisResults.pca;
@@ -170,6 +166,10 @@ function render() {
         analysisResults.correctedHeatmap ||
         analysisResults.heatmap;
 
+    const resultsData =
+        analysisResults.correctedResults ||
+        analysisResults.results;
+
     if (pcaData) {
         drawPCA(pcaData);
     }
@@ -180,6 +180,10 @@ function render() {
 
     if (heatmapData) {
         drawHeatmap(heatmapData);
+    }
+
+    if (resultsData) {
+        drawResultsTable(resultsData);
     }
 
     updateDataStatus();
