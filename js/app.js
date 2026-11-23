@@ -15,6 +15,68 @@ buildBatchEditor
 }
 from "./ui.js";
 
+import {
+runCombat
+}
+from "./combat.js";
+
+import {
+getBatchAssignments
+}
+from "./ui.js";
+
+document
+.getElementById(
+"applyCombatBtn"
+)
+.addEventListener(
+"click",
+async()=>{
+
+const status =
+document.getElementById(
+"combatStatus"
+);
+
+status.innerHTML =
+"Running ComBat...";
+
+try{
+
+const batches =
+getBatchAssignments();
+
+const corrected =
+await runCombat(
+
+analysisResults.logMatrix,
+
+analysisResults.metadata,
+
+batches
+
+);
+
+analysisResults.correctedMatrix =
+corrected;
+
+status.innerHTML =
+"ComBat completed";
+
+render();
+
+}
+catch(error){
+
+status.innerHTML =
+"ComBat failed";
+
+console.error(error);
+
+}
+
+});
+
 let analysisResults;
 
 document
