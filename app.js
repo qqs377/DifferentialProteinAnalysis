@@ -207,9 +207,10 @@
   async function loadFile(file) {
     if (!file) return;
     notice(null);
-    setStatus(`Reading ${file.name}…`, true);
-    await tick();
     try {
+      await needLibs('XLSX', 'Plotly');
+      setStatus(`Reading ${file.name}…`, true);
+      await tick();
       const lower = file.name.toLowerCase();
       let wb;
       if (/\.(csv|tsv|txt)$/.test(lower)) wb = XLSX.read(await file.text(), { type: 'string' });
@@ -362,6 +363,8 @@
   async function loadBatchFile(file) {
     const msg = $('#b-file-msg');
     try {
+      await needLibs('XLSX');
+      setStatus('');
       const lower = file.name.toLowerCase();
       const wb = /\.(csv|tsv|txt)$/.test(lower)
         ? XLSX.read(await file.text(), { type: 'string' })
@@ -1245,10 +1248,15 @@
     const btn = $('#dl-zip');
     btn.disabled = true;
     try {
+      await needLibs('JSZip');
+      setStatus('');
       const zip = new JSZip();
       for (const it of downloadItems()) zip.file(it.name, it.make());
       const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
       saveBlob(`LFQ_Explorer_results_${safeName(state.fileName.replace(/\.[^.]+$/, ''))}.zip`, blob);
+    } catch (e) {
+      setStatus('');
+      notice(e.message);
     } finally {
       btn.disabled = false;
     }
@@ -1258,13 +1266,12 @@
    * Event wiring
    * =================================================================== */
   function wire() {
-    const dz = $('#dropzone'), fi = $('#file-input');
-    dz.addEventListener('click', () => fi.click());
-    dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fi.click(); } });
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('is-over'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('is-over'));
-    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('is-over'); loadFile(e.dataTransfer.files[0]); });
-    fi.addEventListener('change', () => { loadFile(fi.files[0]); fi.value = ''; });
+    const fi = $('#file-input');
+    fi.addEventListener('change', () => {
+      const file = fi.files && fi.files[0];
+      fi.value = '';           // allows picking the same file again
+      if (file) loadFile(file);
+    });
 
     $('#sheet-select').addEventListener('change', e => {
       try { resetResults(); parseSheet(e.target.value); } catch (err) { notice(err.message); }
@@ -1358,12 +1365,68 @@
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderActive);
   }
 
+  /* ===================================================================
+   * Library loading with fallbacks: local lib/ folder first, then CDNs.
+   * =================================================================== */
+  const LIBS = {
+    XLSX: { label: 'SheetJS (Excel reader)', urls: [
+      'lib/xlsx.full.min.js',
+      'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+      'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+    ] },
+    Plotly: { label: 'Plotly (plots)', urls: [
+      'lib/plotly.min.js',
+      'https://cdn.plot.ly/plotly-2.35.2.min.js',
+      'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js',
+      'https://unpkg.com/plotly.js-dist-min@2.35.2/plotly.min.js'
+    ] },
+    JSZip: { label: 'JSZip (ZIP downloads)', urls: [
+      'lib/jszip.min.js',
+      'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+      'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+    ] }
+  };
+
+  function loadScript(url) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = url;
+      el.async = true;
+      el.onload = () => resolve();
+      el.onerror = () => { el.remove(); reject(new Error(url)); };
+      document.head.appendChild(el);
+    });
+  }
+
+  const libPromises = {};
+  function ensureLib(name) {
+    if (window[name]) return Promise.resolve();
+    if (!libPromises[name]) {
+      libPromises[name] = (async () => {
+        for (const url of LIBS[name].urls) {
+          try { await loadScript(url); if (window[name]) return; } catch (_) { /* try the next source */ }
+        }
+        throw new Error(`${LIBS[name].label} could not be loaded. Check the internet connection or firewall, or place the library file in a lib/ folder next to index.html (see README).`);
+      })();
+      libPromises[name].catch(() => { delete libPromises[name]; });   // allow a retry later
+    }
+    return libPromises[name];
+  }
+
+  async function needLibs(...names) {
+    if (names.every(n => window[n])) return;
+    setStatus('Loading components…', true);
+    await Promise.all(names.map(ensureLib));
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     drawHero();
-    if (!window.XLSX || !window.Plotly) {
-      notice('The plotting and spreadsheet libraries did not load. Check your internet connection and reload the page.');
-      return;
-    }
     wire();
+    // Start fetching libraries straight away so they are ready when a file is chosen.
+    needLibs('XLSX', 'Plotly')
+      .then(() => setStatus(''))
+      .catch(e => { setStatus(''); notice(e.message); });
   });
 })();
