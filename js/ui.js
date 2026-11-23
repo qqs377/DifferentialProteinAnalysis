@@ -71,3 +71,23 @@ document
 .disabled = false;
 
 }
+
+export function getBatchAssignments(){
+
+const assignments = {};
+
+document
+.querySelectorAll(
+".batch-select"
+)
+.forEach(select => {
+
+assignments[
+select.dataset.sample
+] = select.value;
+
+});
+
+return assignments;
+
+}
