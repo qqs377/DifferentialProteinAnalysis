@@ -9,9 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <!-- Libraries (SheetJS, Plotly, JSZip) are loaded by app.js, trying a local lib/ folder first and then several CDNs. -->
   <script src="stats.js" defer></script>
   <script src="app.js" defer></script>
 </head>
@@ -34,11 +32,9 @@
     <aside class="workflow" aria-label="Analysis setup">
       <section class="step">
         <h2><span class="step-n">1</span>Load your export</h2>
-        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="dz-hint">
-          <strong>Drop a Proteome Discoverer file here</strong>
-          <span id="dz-hint">or press to browse. Accepts .xlsx, .xls, .csv or tab-delimited .txt</span>
-        </div>
-        <input id="file-input" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" hidden>
+        <input id="file-input" class="visually-hidden" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt">
+        <label for="file-input" class="btn btn-primary file-pick">Choose file</label>
+        <p class="hint">Proteome Discoverer Proteins table as .xlsx, .xls, .csv or tab-delimited .txt</p>
         <div id="file-info" class="file-info" hidden></div>
         <label id="sheet-row" class="field" hidden>Worksheet
           <select id="sheet-select"></select>
@@ -105,7 +101,7 @@
         <div class="intro-text">
           <h1>Differential protein abundance from a Proteome Discoverer export</h1>
           <p>Load the Proteins table you exported from Proteome Discoverer. LFQ Explorer filters it, log2-transforms the normalized abundances, and compares every pair of groups, giving you a PCA, clustered heatmaps and volcano plots you can click through protein by protein.</p>
-          <p>The file needs an <em>Accession</em> column and per-sample abundance columns named like <em>Abundances (Normalized): F3: Sample </em>. Columns such as <em>Master</em>, <em>Contaminant</em>, <em>Protein FDR Confidence: Combined</em>, <em># Unique Peptides</em>, <em>Gene Symbol</em> and <em>Description</em> are used when present.</p>
+          <p>The file needs an <em>Accession</em> column and per-sample abundance columns named like <em>Abundances (Normalized): F3: Sample, 11E8_KO</em>. Columns such as <em>Master</em>, <em>Contaminant</em>, <em>Protein FDR Confidence: Combined</em>, <em># Unique Peptides</em>, <em>Gene Symbol</em> and <em>Description</em> are used when present.</p>
         </div>
         <svg id="hero-volcano" class="hero-volcano" viewBox="0 0 400 260" aria-hidden="true"></svg>
       </section>
