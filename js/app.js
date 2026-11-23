@@ -4,34 +4,41 @@ import {
     drawVolcano,
     drawPCA,
     drawHeatmap,
-    drawResultsTable
+    drawResultsTable,
+    getCurrentVolcanoData
 } from "./plots.js";
 
 import {
     buildBatchEditor,
-    getBatchAssignments
+    getBatchAssignments,
+    setupProteinSearch,
+    displayProteinInfo,
+    highlightProtein,
+    updateComparisonLabel
 } from "./ui.js";
 
 import {
     runCombat
 } from "./combat.js";
 
-/* ---------------------------------------
-   GLOBAL APPLICATION STATE
---------------------------------------- */
+/* ==========================================
+   GLOBAL STATE
+========================================== */
 
 let analysisResults = null;
 
-/* ---------------------------------------
+/* ==========================================
    COMPARISON DROPDOWN
---------------------------------------- */
+========================================== */
 
-function populateComparisonDropdown(){
+function populateComparisonDropdown() {
 
     const selector =
         document.getElementById(
             "comparisonSelector"
         );
+
+    if (!selector) return;
 
     selector.innerHTML = "";
 
@@ -40,29 +47,27 @@ function populateComparisonDropdown(){
             analysisResults.volcano
         );
 
-    comparisons.forEach(name=>{
+    comparisons.forEach(name => {
 
         const option =
             document.createElement(
                 "option"
             );
 
-        option.value =
-            name;
-
-        option.textContent =
-            name;
+        option.value = name;
+        option.textContent = name;
 
         selector.appendChild(
             option
         );
 
     });
+
 }
 
-/* -------------------------
-   DROPDOWN LISTENER
-------------------------- */
+/* ==========================================
+   COMPARISON CHANGE
+========================================== */
 
 document
     .getElementById(
@@ -72,140 +77,219 @@ document
         "change",
         () => {
 
+            const comparison =
+                document.getElementById(
+                    "comparisonSelector"
+                ).value;
+
+            updateComparisonLabel(
+                comparison
+            );
+
             render();
 
         }
     );
 
-/* ---------------------------------------
+/* ==========================================
    FILE UPLOAD
---------------------------------------- */
+========================================== */
 
 document
     .getElementById("fileInput")
-    .addEventListener("change", async (e) => {
+    .addEventListener(
+        "change",
+        async (e) => {
 
-        const file = e.target.files[0];
+            const file =
+                e.target.files[0];
 
-        if (!file) return;
+            if (!file) return;
 
-        try {
+            try {
 
-            analysisResults =
-                await loadExcel(file);
+                analysisResults =
+                    await loadExcel(
+                        file
+                    );
 
-            buildBatchEditor(
-                analysisResults.metadata
-            );
-
-            populateComparisonDropdown();
-
-            render();
-
-        } catch (error) {
-
-            console.error(error);
-
-            alert(
-                "Failed to load Proteome Discoverer file."
-            );
-        }
-    });
-
-/* ---------------------------------------
-   COMBAT BUTTON
---------------------------------------- */
-
-document
-    .getElementById("applyCombatBtn")
-    .addEventListener("click", async () => {
-
-        if (!analysisResults) {
-
-            alert(
-                "Please upload a PD file first."
-            );
-
-            return;
-        }
-
-        const btn =
-            document.getElementById(
-                "applyCombatBtn"
-            );
-
-        const status =
-            document.getElementById(
-                "combatStatus"
-            );
-
-        btn.disabled = true;
-
-        status.innerHTML =
-            "Running ComBat batch correction...";
-
-        try {
-
-            const batchAssignments =
-                getBatchAssignments();
-
-            const correctedMatrix =
-                await runCombat(
-                    analysisResults.logMatrix,
-                    analysisResults.metadata,
-                    batchAssignments
+                buildBatchEditor(
+                    analysisResults.metadata
                 );
 
-            analysisResults.corrected = true;
+                populateComparisonDropdown();
 
-            analysisResults.correctedMatrix =
-                correctedMatrix;
+                const selector =
+                    document.getElementById(
+                        "comparisonSelector"
+                    );
 
-            /*
-             * Future:
-             * Recompute downstream analyses
-             * from corrected matrix
-             */
+                const firstComparison =
+                    Object.keys(
+                        analysisResults.volcano
+                    )[0];
 
-            // analysisResults.correctedPCA =
-            //     await runPCA(correctedMatrix);
+                if (
+                    selector &&
+                    firstComparison
+                ) {
 
-            // analysisResults.correctedVolcano =
-            //     await runDifferentialAnalysis(
-            //         correctedMatrix,
-            //         analysisResults.metadata
-            //     );
+                    selector.value =
+                        firstComparison;
 
-            // analysisResults.correctedHeatmap =
-            //     await runHeatmapAnalysis(
-            //         correctedMatrix
-            //     );
+                    updateComparisonLabel(
+                        firstComparison
+                    );
+                }
 
-            status.innerHTML =
-                "✓ ComBat completed successfully";
+                setupProteinSearch(
 
-            render();
+                    getCurrentVolcanoData,
 
-        } catch (error) {
+                    protein => {
 
-            console.error(error);
+                        displayProteinInfo(
+                            protein
+                        );
 
-            status.innerHTML =
-                "✗ ComBat failed";
+                        highlightProtein(
+                            protein.accession
+                        );
 
-        } finally {
+                    }
 
-            btn.disabled = false;
+                );
+
+                document.getElementById(
+                    "combatStatus"
+                ).textContent =
+                    "Raw data loaded";
+
+                render();
+
+            } catch(error) {
+
+                console.error(
+                    error
+                );
+
+                alert(
+                    "Failed to load Proteome Discoverer file."
+                );
+
+            }
+
         }
-    });
+    );
 
-/* ---------------------------------------
+/* ==========================================
+   COMBAT
+========================================== */
+
+document
+    .getElementById(
+        "applyCombatBtn"
+    )
+    .addEventListener(
+        "click",
+
+        async () => {
+
+            if (
+                !analysisResults
+            ) {
+
+                alert(
+                    "Please load a file first."
+                );
+
+                return;
+
+            }
+
+            const button =
+                document.getElementById(
+                    "applyCombatBtn"
+                );
+
+            const status =
+                document.getElementById(
+                    "combatStatus"
+                );
+
+            button.disabled = true;
+
+            status.textContent =
+                "Running ComBat batch correction...";
+
+            try {
+
+                const batches =
+                    getBatchAssignments();
+
+                const correctedMatrix =
+                    await runCombat(
+
+                        analysisResults.logMatrix,
+
+                        analysisResults.metadata,
+
+                        batches
+
+                    );
+
+                analysisResults.corrected =
+                    true;
+
+                analysisResults.correctedMatrix =
+                    correctedMatrix;
+
+                /*
+                 * Future enhancement:
+                 *
+                 * Recalculate PCA
+                 * Recalculate DE
+                 * Recalculate Volcano
+                 * Recalculate Heatmap
+                 *
+                 * from corrected matrix
+                 */
+
+                status.textContent =
+                    "✓ ComBat completed successfully";
+
+                render();
+
+            } catch(error) {
+
+                console.error(
+                    error
+                );
+
+                status.textContent =
+                    "✗ ComBat failed";
+
+            } finally {
+
+                button.disabled =
+                    false;
+
+            }
+
+        }
+    );
+
+/* ==========================================
    RENDER
---------------------------------------- */
+========================================== */
 
 function render() {
 
-    if (!analysisResults) return;
+    if (
+        !analysisResults
+    ) {
+        return;
+    }
 
     const selector =
         document.getElementById(
@@ -217,6 +301,16 @@ function render() {
         Object.keys(
             analysisResults.volcano
         )[0];
+
+    if (
+        comparison
+    ) {
+
+        updateComparisonLabel(
+            comparison
+        );
+
+    }
 
     const volcanoData =
         analysisResults.volcano[
@@ -236,50 +330,76 @@ function render() {
         analysisResults.correctedHeatmap ||
         analysisResults.heatmap;
 
-    if (pcaData) {
-        drawPCA(pcaData);
+    if (
+        pcaData
+    ) {
+
+        drawPCA(
+            pcaData
+        );
+
     }
 
-    if (volcanoData) {
-        drawVolcano(volcanoData);
+    if (
+        volcanoData
+    ) {
+
+        drawVolcano(
+            volcanoData
+        );
+
     }
 
-    if (heatmapData) {
-        drawHeatmap(heatmapData);
+    if (
+        heatmapData
+    ) {
+
+        drawHeatmap(
+            heatmapData
+        );
+
     }
 
-    if (resultsData) {
-        drawResultsTable(resultsData);
+    if (
+        resultsData
+    ) {
+
+        drawResultsTable(
+            resultsData
+        );
+
     }
 
     updateDataStatus();
+
 }
 
-/* ---------------------------------------
-   DATA STATUS DISPLAY
---------------------------------------- */
+/* ==========================================
+   DATA STATUS
+========================================== */
 
 function updateDataStatus() {
 
-    const statusElement =
+    const status =
         document.getElementById(
             "dataStatus"
         );
 
-    if (!statusElement) return;
+    if (!status) return;
 
     if (
         analysisResults &&
         analysisResults.corrected
     ) {
 
-        statusElement.innerHTML =
+        status.textContent =
             "Showing ComBat-corrected data";
 
     } else {
 
-        statusElement.innerHTML =
+        status.textContent =
             "Showing raw data";
-    }
-}
 
+    }
+
+}
