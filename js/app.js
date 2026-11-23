@@ -10,6 +10,11 @@ drawHeatmap
 }
 from "./plots.js";
 
+import {
+buildBatchEditor
+}
+from "./ui.js";
+
 let analysisResults;
 
 document
@@ -23,6 +28,10 @@ const file=e.target.files[0];
 analysisResults =
 await loadExcel(file);
 
+buildBatchEditor(
+analysisResults.metadata
+);
+  
 render();
 
 }
