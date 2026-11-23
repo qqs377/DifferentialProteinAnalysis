@@ -1,353 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
-    <title>Proteomics Explorer</title>
-
-    <link rel="stylesheet"
-          href="css/styles.css">
-
-    <!-- Plotly -->
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-
-    <!-- SheetJS -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-    <!-- Pyodide -->
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LFQ Explorer · Differential proteomics in the browser</title>
+  <meta name="description" content="Differential protein abundance analysis of Proteome Discoverer exports. Runs entirely in your browser; no data is uploaded or stored.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+  <script src="stats.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
-
 <body>
-
-    <header>
-
-        <h1>Proteomics Explorer</h1>
-
-        <p>
-            Interactive Proteome Discoverer Analysis Platform
-        </p>
-
-        <p>
-            All analyses are performed locally in your browser.
-            No uploaded data are stored or transmitted.
-        </p>
-
-    </header>
-
-    <div class="container">
-
-        <!-- ==========================================
-             SIDEBAR
-        =========================================== -->
-
-        <aside class="sidebar">
-
-            <h2>Data Input</h2>
-
-            <input
-                type="file"
-                id="fileInput"
-                accept=".xlsx,.xls">
-
-            <hr>
-
-            <div id="dataStatus">
-
-                No file loaded
-
-            </div>
-
-            <hr>
-
-            <!-- ==========================================
-                 COMPARISON SELECTOR
-            =========================================== -->
-
-            <h3>Differential Expression</h3>
-
-            <label>
-
-                Comparison
-
-            </label>
-
-            <select id="comparisonSelector">
-
-            </select>
-
-            <hr>
-
-            <!-- ==========================================
-                 PROTEIN SEARCH
-            =========================================== -->
-
-            <h3>Protein Search</h3>
-
-            <input
-                type="text"
-                id="proteinSearch"
-                placeholder="Gene or Accession">
-
-            <button id="searchProteinBtn">
-
-                Search
-
-            </button>
-
-            <hr>
-
-            <!-- ==========================================
-                 COMBAT
-            =========================================== -->
-
-            <h3>Batch Correction</h3>
-
-            <div class="combat-panel">
-
-                <label>
-
-                    <input
-                        type="checkbox"
-                        id="combatEnabled">
-
-                    Enable ComBat
-
-                </label>
-
-                <br><br>
-
-                <div id="batchEditor">
-
-                </div>
-
-                <br>
-
-                <button
-                    id="applyCombatBtn"
-                    disabled>
-
-                    Apply ComBat
-
-                </button>
-
-                <div id="combatStatus">
-
-                </div>
-
-            </div>
-
-        </aside>
-
-        <!-- ==========================================
-             MAIN CONTENT
-        =========================================== -->
-
-        <main class="main">
-
-            <!-- ======================================
-                 TABS
-            ======================================= -->
-
-            <div class="tabs">
-
-                <button
-                    class="tab active"
-                    data-tab="pca">
-
-                    PCA
-
-                </button>
-
-                <button
-                    class="tab"
-                    data-tab="volcano">
-
-                    Volcano
-
-                </button>
-
-                <button
-                    class="tab"
-                    data-tab="heatmap">
-
-                    Heatmap
-
-                </button>
-
-                <button
-                    class="tab"
-                    data-tab="results">
-
-                    Results
-
-                </button>
-
-            </div>
-
-            <!-- ======================================
-                 PCA TAB
-            ======================================= -->
-
-            <section
-                id="pca"
-                class="panel">
-
-                <h2>Principal Component Analysis</h2>
-
-                <div id="pcaPlot">
-
-                </div>
-
-            </section>
-
-            <!-- ======================================
-                 VOLCANO TAB
-            ======================================= -->
-
-            <section
-                id="volcano"
-                class="panel hidden">
-
-                <h2>Volcano Plot</h2>
-
-                <div id="volcanoPlot">
-
-                </div>
-
-                <br>
-
-                <div id="proteinInfo">
-
-                    Click a protein point to display details.
-
-                </div>
-
-            </section>
-
-            <!-- ======================================
-                 HEATMAP TAB
-            ======================================= -->
-
-            <section
-                id="heatmap"
-                class="panel hidden">
-
-                <h2>Protein Heatmap</h2>
-
-                <div id="heatmapPlot">
-
-                </div>
-
-            </section>
-
-            <!-- ======================================
-                 RESULTS TAB
-            ======================================= -->
-
-            <section
-                id="results"
-                class="panel hidden">
-
-                <h2>Differential Expression Results</h2>
-
-                <div class="results-toolbar">
-
-                    <button id="downloadCsv">
-
-                        Download CSV
-
-                    </button>
-
-                    <button id="downloadExcel">
-
-                        Download Excel
-
-                    </button>
-
-                </div>
-
-                <br>
-
-                <table id="resultsTable">
-
-                </table>
-
-            </section>
-
-        </main>
-
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="6" cy="24" r="2.2" class="h-down"/><circle cx="10" cy="17" r="2.2" class="h-down"/>
+        <circle cx="14" cy="26" r="2.2" class="h-ns"/><circle cx="18" cy="25" r="2.2" class="h-ns"/>
+        <circle cx="16" cy="21" r="2.2" class="h-ns"/><circle cx="22" cy="15" r="2.2" class="h-up"/>
+        <circle cx="26" cy="8" r="2.2" class="h-up"/>
+      </svg>
+      <span class="brand-name">LFQ Explorer</span>
     </div>
+    <p class="privacy">Your file is read inside this browser tab. Nothing is uploaded or saved, and closing the tab discards everything.</p>
+  </header>
 
-    <!-- ==========================================
-         TAB SWITCHING
-    =========================================== -->
+  <div class="layout">
+    <!-- ===================== Workflow sidebar ===================== -->
+    <aside class="workflow" aria-label="Analysis setup">
+      <section class="step">
+        <h2><span class="step-n">1</span>Load your export</h2>
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-describedby="dz-hint">
+          <strong>Drop a Proteome Discoverer file here</strong>
+          <span id="dz-hint">or press to browse. Accepts .xlsx, .xls, .csv or tab-delimited .txt</span>
+        </div>
+        <input id="file-input" type="file" accept=".xlsx,.xls,.csv,.tsv,.txt" hidden>
+        <div id="file-info" class="file-info" hidden></div>
+        <label id="sheet-row" class="field" hidden>Worksheet
+          <select id="sheet-select"></select>
+        </label>
+        <label id="quant-row" class="field" hidden>Quantity
+          <select id="quant-select"></select>
+        </label>
+      </section>
 
-    <script>
+      <section class="step">
+        <h2><span class="step-n">2</span>Check samples and groups</h2>
+        <p class="hint">Groups and sample names are read from the column headers. Review them, exclude outliers or rename groups in the sample table.</p>
+        <button id="open-samples" class="btn btn-quiet" type="button" disabled>Open sample table</button>
+      </section>
 
-        document
-            .querySelectorAll(".tab")
-            .forEach(button => {
+      <section class="step">
+        <h2><span class="step-n">3</span>Filter proteins</h2>
+        <label class="check"><input type="checkbox" id="f-master" checked> Master proteins only</label>
+        <label class="check"><input type="checkbox" id="f-contam" checked> Remove contaminants</label>
+        <label class="check"><input type="checkbox" id="f-highconf" checked> High FDR confidence only</label>
+        <label class="field field-inline">Minimum unique peptides
+          <input type="number" id="f-minpep" value="2" min="0" step="1">
+        </label>
+        <label class="field field-inline">Detected in at least
+          <span class="inline-unit"><input type="number" id="f-minrep" value="2" min="1" step="1"> replicates of one group</span>
+        </label>
+        <p id="filter-notes" class="hint warn-text" hidden></p>
+      </section>
 
-                button.addEventListener(
-                    "click",
-                    () => {
+      <section class="step">
+        <h2><span class="step-n">4</span>Batch correction</h2>
+        <label class="check"><input type="checkbox" id="b-enable"> Correct batch effects with ComBat</label>
+        <div id="batch-fields" class="sub-fields" hidden>
+          <p class="hint">Enter a batch label for every sample in the sample table, or load a CSV with <em>Sample</em> and <em>Batch</em> columns.</p>
+          <label class="btn btn-quiet file-btn">Load batch CSV
+            <input type="file" id="b-file" accept=".csv,.tsv,.txt,.xlsx" hidden>
+          </label>
+          <p id="b-file-msg" class="hint" hidden></p>
+          <label class="check"><input type="checkbox" id="b-protect" checked> Preserve differences between groups</label>
+          <label class="check"><input type="checkbox" id="b-remask" checked> Keep originally missing values missing</label>
+        </div>
+      </section>
 
-                        document
-                            .querySelectorAll(".tab")
-                            .forEach(
-                                tab =>
-                                tab.classList.remove(
-                                    "active"
-                                )
-                            );
+      <section class="step">
+        <h2><span class="step-n">5</span>Statistics</h2>
+        <label class="field field-inline">Minimum values per group to test
+          <input type="number" id="s-minper" value="2" min="2" step="1">
+        </label>
+        <p class="hint">Every pair of groups is compared with Welch's t-test on log2 abundances, with Benjamini–Hochberg correction. Thresholds can be changed live in the results.</p>
+      </section>
 
-                        document
-                            .querySelectorAll(".panel")
-                            .forEach(
-                                panel =>
-                                panel.classList.add(
-                                    "hidden"
-                                )
-                            );
+      <div class="run">
+        <button id="run-btn" class="btn btn-primary" type="button" disabled>Run analysis</button>
+        <p id="run-status" class="run-status" aria-live="polite"></p>
+      </div>
+    </aside>
 
-                        button.classList.add(
-                            "active"
-                        );
+    <!-- ===================== Main workspace ===================== -->
+    <main class="workspace">
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <div id="stale" class="notice notice-info" hidden>Settings changed since the last run. Run the analysis again to update the results.</div>
 
-                        const panelId =
-                            button.dataset.tab;
+      <section id="intro" class="intro">
+        <div class="intro-text">
+          <h1>Differential protein abundance from a Proteome Discoverer export</h1>
+          <p>Load the Proteins table you exported from Proteome Discoverer. LFQ Explorer filters it, log2-transforms the normalized abundances, and compares every pair of groups, giving you a PCA, clustered heatmaps and volcano plots you can click through protein by protein.</p>
+          <p>The file needs an <em>Accession</em> column and per-sample abundance columns named like <em>Abundances (Normalized): F3: Sample </em>. Columns such as <em>Master</em>, <em>Contaminant</em>, <em>Protein FDR Confidence: Combined</em>, <em># Unique Peptides</em>, <em>Gene Symbol</em> and <em>Description</em> are used when present.</p>
+        </div>
+        <svg id="hero-volcano" class="hero-volcano" viewBox="0 0 400 260" aria-hidden="true"></svg>
+      </section>
 
-                        document
-                            .getElementById(
-                                panelId
-                            )
-                            .classList.remove(
-                                "hidden"
-                            );
+      <nav id="tabs" class="tabs" role="tablist" aria-label="Results" hidden>
+        <button role="tab" data-tab="samples" aria-selected="false">Samples</button>
+        <button role="tab" data-tab="overview" aria-selected="false" disabled>Overview</button>
+        <button role="tab" data-tab="pca" aria-selected="false" disabled>PCA</button>
+        <button role="tab" data-tab="corr" aria-selected="false" disabled>Sample correlation</button>
+        <button role="tab" data-tab="heatmap" aria-selected="false" disabled>Protein heatmap</button>
+        <button role="tab" data-tab="de" aria-selected="false" disabled>Differential abundance</button>
+        <button role="tab" data-tab="downloads" aria-selected="false" disabled>Downloads</button>
+      </nav>
 
-                    }
-                );
+      <!-- Samples -->
+      <section id="panel-samples" class="panel" role="tabpanel" hidden>
+        <div class="panel-head">
+          <h2>Samples and groups</h2>
+          <p class="hint">Changes apply on the next run. Untick a sample to leave it out of every analysis.</p>
+        </div>
+        <div id="group-summary" class="group-summary"></div>
+        <div class="table-wrap">
+          <table class="data-table sample-table">
+            <thead><tr><th scope="col">Use</th><th scope="col">Sample</th><th scope="col">Group</th><th scope="col">Batch</th><th scope="col">Source column</th></tr></thead>
+            <tbody id="sample-tbody"></tbody>
+          </table>
+        </div>
+        <datalist id="group-options"></datalist>
+      </section>
 
-            });
+      <!-- Overview -->
+      <section id="panel-overview" class="panel" role="tabpanel" hidden>
+        <div class="panel-head"><h2>Overview</h2></div>
+        <div class="overview-grid">
+          <div class="funnel">
+            <h3>Protein filtering</h3>
+            <ol id="ov-counts" class="funnel-list"></ol>
+            <p id="ov-design" class="hint"></p>
+          </div>
+          <div class="plot-card">
+            <h3>Missing values per sample</h3>
+            <div id="plot-missing" class="plot plot-sm"></div>
+          </div>
+        </div>
+        <div class="plot-card">
+          <div class="card-head">
+            <h3>log2 abundance distribution</h3>
+            <label id="ov-corr-wrap" class="check" hidden><input type="checkbox" id="ov-corr" checked> Show batch-corrected values</label>
+          </div>
+          <div id="plot-dist" class="plot"></div>
+        </div>
+      </section>
 
-    </script>
+      <!-- PCA -->
+      <section id="panel-pca" class="panel" role="tabpanel" hidden>
+        <div class="toolbar">
+          <label>Horizontal <select id="pca-x"></select></label>
+          <label>Vertical <select id="pca-y"></select></label>
+          <label id="pca-before-wrap" class="check" hidden><input type="checkbox" id="pca-before"> Show before batch correction</label>
+        </div>
+        <p id="pca-note" class="hint"></p>
+        <div class="pca-grid">
+          <div id="plot-pca" class="plot plot-lg"></div>
+          <div id="plot-scree" class="plot plot-sm"></div>
+        </div>
+      </section>
 
-    <!-- ==========================================
-         LOAD APP
-    =========================================== -->
+      <!-- Correlation -->
+      <section id="panel-corr" class="panel" role="tabpanel" hidden>
+        <div class="toolbar">
+          <label class="check"><input type="checkbox" id="corr-annot" checked> Show values</label>
+        </div>
+        <p class="hint">Pearson correlation between samples on standardized, median-imputed log2 abundances, clustered by average linkage.</p>
+        <div id="plot-corr" class="plot plot-square"></div>
+      </section>
 
-    <script
-        type="module"
-        src="js/app.js">
-    </script>
+      <!-- Heatmap -->
+      <section id="panel-heatmap" class="panel" role="tabpanel" hidden>
+        <div class="toolbar">
+          <label>Proteins
+            <select id="hm-source">
+              <option value="variable">Most variable</option>
+              <option value="sig">Significant in selected comparison</option>
+            </select>
+          </label>
+          <label>Show
+            <select id="hm-n">
+              <option>25</option><option selected>50</option><option>100</option><option>200</option><option>500</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="hm-colclust" checked> Cluster samples</label>
+        </div>
+        <p id="hm-note" class="hint"></p>
+        <div id="plot-heatmap" class="plot"></div>
+      </section>
 
+      <!-- Differential abundance -->
+      <section id="panel-de" class="panel" role="tabpanel" hidden>
+        <div class="toolbar">
+          <label>Comparison <select id="de-comp"></select></label>
+          <button id="de-swap" class="btn btn-quiet" type="button">Swap direction</button>
+          <label>|log2 FC| at least <input type="number" id="de-fc" value="1" min="0" step="0.1"></label>
+          <label>p below <input type="number" id="de-p" value="0.05" min="0" max="1" step="0.01"></label>
+          <label>Test on
+            <select id="de-yaxis">
+              <option value="adj">Adjusted p (BH)</option>
+              <option value="raw">Raw p</option>
+            </select>
+          </label>
+          <label>Label top <input type="number" id="de-labels" value="10" min="0" max="200" step="1"></label>
+          <label class="grow">Find protein <input id="de-search" list="protein-list" placeholder="Gene symbol or accession" autocomplete="off"></label>
+        </div>
+        <datalist id="protein-list"></datalist>
+        <p id="de-summary" class="summary"></p>
+        <div class="de-grid">
+          <div id="plot-volcano" class="plot plot-lg"></div>
+          <aside id="inspector" class="inspector" aria-live="polite"></aside>
+        </div>
+        <div class="table-head">
+          <h3>Results for this comparison</h3>
+          <input id="de-filter" type="search" placeholder="Filter by gene, accession or description" aria-label="Filter results">
+          <label class="check"><input type="checkbox" id="de-sigonly"> Significant only</label>
+          <button id="de-dl" class="btn btn-quiet" type="button">Download this comparison</button>
+        </div>
+        <div class="table-wrap">
+          <table id="de-table" class="data-table de-table">
+            <thead>
+              <tr>
+                <th scope="col"><button data-sort="gene">Gene</button></th>
+                <th scope="col"><button data-sort="acc">Accession</button></th>
+                <th scope="col" class="num"><button data-sort="lfc">log2 FC</button></th>
+                <th scope="col" class="num"><button data-sort="m1" id="th-m1">Mean A</button></th>
+                <th scope="col" class="num"><button data-sort="m2" id="th-m2">Mean B</button></th>
+                <th scope="col" class="num"><button data-sort="p">p</button></th>
+                <th scope="col" class="num"><button data-sort="adj">Adjusted p</button></th>
+                <th scope="col">Call</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="de-pager" class="pager"></div>
+      </section>
+
+      <!-- Downloads -->
+      <section id="panel-downloads" class="panel" role="tabpanel" hidden>
+        <div class="panel-head">
+          <h2>Downloads</h2>
+          <p class="hint">Files are built in your browser at the moment you press a button. Plots can be saved as PNG or SVG from the icons above each plot.</p>
+        </div>
+        <button id="dl-zip" class="btn btn-primary" type="button">Download all results as ZIP</button>
+        <ul id="dl-list" class="dl-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <p>Statistics follow the original Python pipeline: log2 transform, Welch's t-test, Benjamini–Hochberg FDR, median imputation for PCA and clustering, parametric ComBat. Results are for exploration; confirm key findings with your own statistical review.</p>
+  </footer>
 </body>
-
 </html>
