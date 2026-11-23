@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Proteomics Explorer</title>
+
+<link rel="stylesheet" href="css/styles.css">
+
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>Proteomics Explorer</h1>
+
+<p>
+All analyses are performed locally in your browser.
+No data are uploaded or stored.
+</p>
+
+</header>
+
+<div class="container">
+
+<div class="sidebar">
+
+<h2>Input</h2>
+
+<input
+type="file"
+id="fileInput"
+accept=".xlsx,.xls"
+/>
+
+<h3>Design Matrix</h3>
+
+<div id="sampleTable"></div>
+
+<button id="generateBtn">
+Run Analysis
+</button>
+
+<hr>
+
+<h3>Batch Correction</h3>
+
+<label>
+
+<input
+type="checkbox"
+id="combatCheckbox">
+
+Use ComBat
+
+</label>
+
+<div id="batchEditor"></div>
+
+</div>
+
+<div class="main">
+
+<div class="tabs">
+
+<button class="tab active" data-tab="pca">
+PCA
+</button>
+
+<button class="tab" data-tab="volcano">
+Volcano
+</button>
+
+<button class="tab" data-tab="heatmap">
+Heatmap
+</button>
+
+<button class="tab" data-tab="results">
+Results
+</button>
+
+</div>
+
+<section id="pca" class="panel">
+<div id="pcaPlot"></div>
+</section>
+
+<section id="volcano" class="panel hidden">
+<div id="comparisonSelector"></div>
+
+<div id="volcanoPlot"></div>
+
+<div id="proteinInfo"></div>
+</section>
+
+<section id="heatmap" class="panel hidden">
+<div id="heatmapPlot"></div>
+</section>
+
+<section id="results" class="panel hidden">
+
+<button id="downloadCsv">
+Download Results
+</button>
+
+<table id="resultsTable"></table>
+
+</section>
+
+</div>
+
+</div>
+
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>
