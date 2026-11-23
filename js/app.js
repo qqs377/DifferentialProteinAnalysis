@@ -1,116 +1,214 @@
-import {
-loadExcel
-}
-from "./analysis.js";
+import { loadExcel } from "./analysis.js";
 
 import {
-drawVolcano,
-drawPCA,
-drawHeatmap
-}
-from "./plots.js";
+    drawVolcano,
+    drawPCA,
+    drawHeatmap
+} from "./plots.js";
 
 import {
-buildBatchEditor
-}
-from "./ui.js";
+    buildBatchEditor,
+    getBatchAssignments
+} from "./ui.js";
 
 import {
-runCombat
-}
-from "./combat.js";
+    runCombat
+} from "./combat.js";
 
-import {
-getBatchAssignments
-}
-from "./ui.js";
+/* ---------------------------------------
+   GLOBAL APPLICATION STATE
+--------------------------------------- */
+
+let analysisResults = null;
+
+/* ---------------------------------------
+   FILE UPLOAD
+--------------------------------------- */
 
 document
-.getElementById(
-"applyCombatBtn"
-)
-.addEventListener(
-"click",
-async()=>{
+    .getElementById("fileInput")
+    .addEventListener("change", async (e) => {
 
-const status =
-document.getElementById(
-"combatStatus"
-);
+        const file = e.target.files[0];
 
-status.innerHTML =
-"Running ComBat...";
+        if (!file) return;
 
-try{
+        try {
 
-const batches =
-getBatchAssignments();
+            analysisResults =
+                await loadExcel(file);
 
-const corrected =
-await runCombat(
+            buildBatchEditor(
+                analysisResults.metadata
+            );
 
-analysisResults.logMatrix,
+            document.getElementById(
+                "combatStatus"
+            ).innerHTML = "";
 
-analysisResults.metadata,
+            render();
 
-batches
+        } catch (error) {
 
-);
+            console.error(error);
 
-analysisResults.correctedMatrix =
-corrected;
+            alert(
+                "Failed to load Proteome Discoverer file."
+            );
+        }
+    });
 
-status.innerHTML =
-"ComBat completed";
-
-render();
-
-}
-catch(error){
-
-status.innerHTML =
-"ComBat failed";
-
-console.error(error);
-
-}
-
-});
-
-let analysisResults;
+/* ---------------------------------------
+   COMBAT BUTTON
+--------------------------------------- */
 
 document
-.getElementById("fileInput")
-.addEventListener(
-"change",
-async(e)=>{
+    .getElementById("applyCombatBtn")
+    .addEventListener("click", async () => {
 
-const file=e.target.files[0];
+        if (!analysisResults) {
 
-analysisResults =
-await loadExcel(file);
+            alert(
+                "Please upload a PD file first."
+            );
 
-buildBatchEditor(
-analysisResults.metadata
-);
-  
-render();
+            return;
+        }
 
+        const btn =
+            document.getElementById(
+                "applyCombatBtn"
+            );
+
+        const status =
+            document.getElementById(
+                "combatStatus"
+            );
+
+        btn.disabled = true;
+
+        status.innerHTML =
+            "Running ComBat batch correction...";
+
+        try {
+
+            const batchAssignments =
+                getBatchAssignments();
+
+            const correctedMatrix =
+                await runCombat(
+                    analysisResults.logMatrix,
+                    analysisResults.metadata,
+                    batchAssignments
+                );
+
+            analysisResults.corrected = true;
+
+            analysisResults.correctedMatrix =
+                correctedMatrix;
+
+            /*
+             * Future:
+             * Recompute downstream analyses
+             * from corrected matrix
+             */
+
+            // analysisResults.correctedPCA =
+            //     await runPCA(correctedMatrix);
+
+            // analysisResults.correctedVolcano =
+            //     await runDifferentialAnalysis(
+            //         correctedMatrix,
+            //         analysisResults.metadata
+            //     );
+
+            // analysisResults.correctedHeatmap =
+            //     await runHeatmapAnalysis(
+            //         correctedMatrix
+            //     );
+
+            status.innerHTML =
+                "✓ ComBat completed successfully";
+
+            render();
+
+        } catch (error) {
+
+            console.error(error);
+
+            status.innerHTML =
+                "✗ ComBat failed";
+
+        } finally {
+
+            btn.disabled = false;
+        }
+    });
+
+/* ---------------------------------------
+   RENDER
+--------------------------------------- */
+
+function render() {
+
+    if (!analysisResults) return;
+
+    /*
+     * If corrected analyses exist,
+     * display those instead of raw.
+     */
+
+    const pcaData =
+        analysisResults.correctedPCA ||
+        analysisResults.pca;
+
+    const volcanoData =
+        analysisResults.correctedVolcano ||
+        analysisResults.volcano;
+
+    const heatmapData =
+        analysisResults.correctedHeatmap ||
+        analysisResults.heatmap;
+
+    if (pcaData) {
+        drawPCA(pcaData);
+    }
+
+    if (volcanoData) {
+        drawVolcano(volcanoData);
+    }
+
+    if (heatmapData) {
+        drawHeatmap(heatmapData);
+    }
+
+    updateDataStatus();
 }
-);
 
-async function render(){
+/* ---------------------------------------
+   DATA STATUS DISPLAY
+--------------------------------------- */
 
-drawPCA(
-analysisResults.pca
-);
+function updateDataStatus() {
 
-drawVolcano(
-analysisResults.volcano
-);
+    const statusElement =
+        document.getElementById(
+            "dataStatus"
+        );
 
-drawHeatmap(
-analysisResults.heatmap
-);
+    if (!statusElement) return;
 
+    if (
+        analysisResults &&
+        analysisResults.corrected
+    ) {
+
+        statusElement.innerHTML =
+            "Showing ComBat-corrected data";
+
+    } else {
+
+        statusElement.innerHTML =
+            "Showing raw data";
+    }
 }
