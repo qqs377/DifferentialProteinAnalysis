@@ -1,5 +1,4 @@
 import { PCA } from "https://esm.sh/ml-pca";
-const pca = new PCA(X);
 
 import jstat from "https://esm.sh/jstat";
 const { jStat } = jstat;
