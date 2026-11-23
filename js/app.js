@@ -228,33 +228,32 @@ document
                 const batches =
                     getBatchAssignments();
 
-                const correctedMatrix =
-                    await runCombat(
-
-                        analysisResults.logMatrix,
-
-                        analysisResults.metadata,
-
+                const corrected =
+                    await runCombatWorkflow(
+                
+                        analysisResults,
+                
                         batches
-
+                
                     );
-
+                
                 analysisResults.corrected =
                     true;
-
+                
                 analysisResults.correctedMatrix =
-                    correctedMatrix;
-
-                /*
-                 * Future enhancement:
-                 *
-                 * Recalculate PCA
-                 * Recalculate DE
-                 * Recalculate Volcano
-                 * Recalculate Heatmap
-                 *
-                 * from corrected matrix
-                 */
+                    corrected.correctedMatrix;
+                
+                analysisResults.correctedPCA =
+                    corrected.correctedPCA;
+                
+                analysisResults.correctedVolcano =
+                    corrected.correctedVolcano;
+                
+                analysisResults.correctedResults =
+                    corrected.correctedResults;
+                
+                analysisResults.correctedHeatmap =
+                    corrected.correctedHeatmap;
 
                 status.textContent =
                     "✓ ComBat completed successfully";
