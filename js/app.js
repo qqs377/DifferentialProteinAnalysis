@@ -18,8 +18,9 @@ import {
 } from "./ui.js";
 
 import {
-    runCombat
-} from "./combat.js";
+    runCombatWorkflow
+}
+from "./combat.js";
 
 /* ==========================================
    GLOBAL STATE
