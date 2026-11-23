@@ -457,129 +457,208 @@ export function runDifferentialAnalysis(
     metadata
 ) {
 
-    const groups =
-        [
-            ...new Set(
-                metadata.map(
-                    m => m.group
-                )
+    const groups = [
+        ...new Set(
+            metadata.map(
+                m => m.group
             )
-        ];
+        )
+    ];
 
-    if(groups.length < 2){
+    if (groups.length < 2) {
 
         return {
-            volcano:[],
-            results:[]
+            volcano: {},
+            results: {}
         };
+
     }
 
-    const g1 = groups[0];
-    const g2 = groups[1];
+    const comparisons = {};
 
-    const cols1 =
-        metadata
-        .filter(
-            m =>
-            m.group === g1
-        )
-        .map(
-            m => m.column
-        );
+    for (let i = 0; i < groups.length; i++) {
 
-    const cols2 =
-        metadata
-        .filter(
-            m =>
-            m.group === g2
-        )
-        .map(
-            m => m.column
-        );
+        for (let j = i + 1; j < groups.length; j++) {
 
-    const results = [];
+            const g1 = groups[i];
+            const g2 = groups[j];
 
-    matrix.forEach(protein => {
+            const cols1 =
+                metadata
+                .filter(
+                    m => m.group === g1
+                )
+                .map(
+                    m => m.column
+                );
 
-        const values1 =
-            cols1
-            .map(
-                c =>
-                protein.values[c]
-            )
-            .filter(
-                v => v !== null
+            const cols2 =
+                metadata
+                .filter(
+                    m => m.group === g2
+                )
+                .map(
+                    m => m.column
+                );
+
+            const results = [];
+
+            matrix.forEach(protein => {
+
+                const values1 =
+                    cols1
+                    .map(
+                        c =>
+                        protein.values[c]
+                    )
+                    .filter(
+                        v =>
+                        v !== null &&
+                        !isNaN(v)
+                    );
+
+                const values2 =
+                    cols2
+                    .map(
+                        c =>
+                        protein.values[c]
+                    )
+                    .filter(
+                        v =>
+                        v !== null &&
+                        !isNaN(v)
+                    );
+
+                if (
+                    values1.length < 2 ||
+                    values2.length < 2
+                ) {
+                    return;
+                }
+
+                const pvalue =
+                    welchsTTest(
+                        values1,
+                        values2
+                    );
+
+                const mean1 =
+                    jStat.mean(values1);
+
+                const mean2 =
+                    jStat.mean(values2);
+
+                const log2fc =
+                    mean1 - mean2;
+
+                results.push({
+
+                    accession:
+                        protein.accession,
+
+                    gene:
+                        protein.gene || "",
+
+                    group1:
+                        g1,
+
+                    group2:
+                        g2,
+
+                    nGroup1:
+                        values1.length,
+
+                    nGroup2:
+                        values2.length,
+
+                    meanGroup1:
+                        mean1,
+
+                    meanGroup2:
+                        mean2,
+
+                    log2fc,
+
+                    foldChange:
+                        Math.pow(
+                            2,
+                            log2fc
+                        ),
+
+                    pvalue
+                });
+
+            });
+
+            applyBH(results);
+
+            results.forEach(r => {
+
+                r.significant =
+                    r.adjP < 0.05 &&
+                    Math.abs(
+                        r.log2fc
+                    ) >= 1;
+
+                if (
+                    r.significant &&
+                    r.log2fc > 0
+                ) {
+
+                    r.status =
+                        "Upregulated";
+
+                } else if (
+                    r.significant &&
+                    r.log2fc < 0
+                ) {
+
+                    r.status =
+                        "Downregulated";
+
+                } else {
+
+                    r.status =
+                        "Not Significant";
+
+                }
+
+                r.negLog10AdjP =
+                    -Math.log10(
+                        Math.max(
+                            r.adjP,
+                            1e-300
+                        )
+                    );
+
+            });
+
+            results.sort(
+                (a, b) =>
+                a.adjP - b.adjP
             );
 
-        const values2 =
-            cols2
-            .map(
-                c =>
-                protein.values[c]
-            )
-            .filter(
-                v => v !== null
-            );
+            const comparisonName =
+                `${g1} vs ${g2}`;
 
-        if (
-            values1.length < 2 ||
-            values2.length < 2
-        ) {
-            return;
+            comparisons[
+                comparisonName
+            ] = results;
+
         }
 
-        const pvalue =
-            welchsTTest(
-                values1,
-                values2
-            );
-
-        const mean1 =
-            jStat.mean(values1);
-
-        const mean2 =
-            jStat.mean(values2);
-
-        const log2fc =
-            mean1 - mean2;
-
-        results.push({
-
-            accession:
-                protein.accession,
-
-            gene:
-                protein.gene,
-
-            group1:g1,
-
-            group2:g2,
-
-            log2fc,
-
-            pvalue
-
-        });
-
-    });
-
-    applyBH(results);
-
-    results.forEach(r => {
-
-        r.significant =
-            r.adjP < 0.05 &&
-            Math.abs(
-                r.log2fc
-            ) >= 1;
-    });
+    }
 
     return {
 
-        volcano: results,
+        volcano:
+            comparisons,
 
-        results
+        results:
+            comparisons
+
     };
+
 }
 
 /* ==========================================
