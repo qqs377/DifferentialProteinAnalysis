@@ -1,5 +1,3 @@
-import * as dfd from "danfojs";
-
 import { PCA } from "ml-pca";
 
 import { jStat } from "jstat";
