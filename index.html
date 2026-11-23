@@ -53,17 +53,24 @@ Run Analysis
 
 <h3>Batch Correction</h3>
 
-<label>
+<div class="combat-panel">
 
-<input
-type="checkbox"
-id="combatCheckbox">
-
-Use ComBat
-
+<label class="checkbox-row">
+<input type="checkbox" id="combatEnabled">
+Enable ComBat Batch Correction
 </label>
 
 <div id="batchEditor"></div>
+
+<button
+id="applyCombatBtn"
+disabled>
+Apply ComBat
+</button>
+
+<div id="combatStatus"></div>
+
+</div>
 
 </div>
 
